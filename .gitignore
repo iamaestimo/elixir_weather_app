@@ -38,3 +38,5 @@ npm-debug.log
 # Env files
 .env, .env.*
 
+/config/appsignal.exs
+
