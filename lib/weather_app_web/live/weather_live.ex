@@ -1,61 +1,3 @@
-# defmodule WeatherAppWeb.WeatherLive do
-#   use WeatherAppWeb, :live_view
-#   alias WeatherApp.Weather
-
-#   def mount(_params, _session, socket) do
-#     {:ok, assign(socket, query: "", weather: nil, loading: false, error: nil)}
-#   end
-
-#   def handle_event("search", %{"query" => query}, socket) do
-#     send(self(), {:run_search, query})
-#     {:noreply, assign(socket, loading: true)}
-#   end
-
-#   def handle_info({:run_search, query}, socket) do
-#     case Weather.get_forecast(query) do
-#       {:ok, weather} ->
-#         {:noreply, assign(socket, weather: weather, loading: false, error: nil)}
-#       {:error, message} ->
-#         {:noreply, assign(socket, weather: nil, loading: false, error: message)}
-#     end
-#   end
-
-#   def render(assigns) do
-#     ~H"""
-#     <div>
-#       <h1>Weather Forecast</h1>
-#       <form phx-submit="search">
-#         <input type="text" name="query" value={@query} placeholder="Enter city or lat,lon" />
-#         <button type="submit">Search</button>
-#       </form>
-
-#       <%= if @loading do %>
-#         <p>Loading...</p>
-#       <% end %>
-
-#       <%= if @error do %>
-#         <p class="error"><%= @error %></p>
-#       <% end %>
-
-#       <%= if @weather do %>
-#         <h2><%= @weather.location %></h2>
-#         <p>Current: <%= @weather.current.temp_c %>°C, <%= @weather.current.condition %></p>
-
-#         <h3>3-Day Forecast:</h3>
-#         <ul>
-#           <%= for day <- @weather.forecast do %>
-#             <li>
-#               <%= day.date %>: <%= day.min_temp_c %>°C to <%= day.max_temp_c %>°C, <%= day.condition %>
-#             </li>
-#           <% end %>
-#         </ul>
-#       <% end %>
-#     </div>
-#     """
-#   end
-# end
-
-
 defmodule WeatherAppWeb.WeatherLive do
   use WeatherAppWeb, :live_view
   alias WeatherApp.Weather
@@ -78,10 +20,65 @@ defmodule WeatherAppWeb.WeatherLive do
     end
   end
 
+  def weather_icon(condition) do
+    case String.downcase(condition) do
+      "sunny" -> "wi-day-sunny"
+      "clear" -> "wi-day-sunny"
+      "partly cloudy" -> "wi-day-cloudy"
+      "cloudy" -> "wi-cloudy"
+      "overcast" -> "wi-cloudy"
+      "mist" -> "wi-fog"
+      "patchy rain possible" -> "wi-day-rain-mix"
+      "patchy snow possible" -> "wi-day-snow"
+      "patchy sleet possible" -> "wi-day-sleet"
+      "patchy freezing drizzle possible" -> "wi-day-sleet"
+      "thundery outbreaks possible" -> "wi-day-thunderstorm"
+      "blowing snow" -> "wi-snow-wind"
+      "blizzard" -> "wi-snow-wind"
+      "fog" -> "wi-fog"
+      "freezing fog" -> "wi-fog"
+      "patchy light drizzle" -> "wi-day-sprinkle"
+      "light drizzle" -> "wi-day-sprinkle"
+      "freezing drizzle" -> "wi-day-rain-mix"
+      "heavy freezing drizzle" -> "wi-day-rain-mix"
+      "patchy light rain" -> "wi-day-rain-mix"
+      "light rain" -> "wi-day-rain-mix"
+      "moderate rain at times" -> "wi-day-rain"
+      "moderate rain" -> "wi-rain"
+      "heavy rain at times" -> "wi-day-rain"
+      "heavy rain" -> "wi-rain"
+      "light freezing rain" -> "wi-day-sleet"
+      "moderate or heavy freezing rain" -> "wi-day-sleet"
+      "light sleet" -> "wi-day-sleet"
+      "moderate or heavy sleet" -> "wi-day-sleet"
+      "patchy light snow" -> "wi-day-snow"
+      "light snow" -> "wi-day-snow"
+      "patchy moderate snow" -> "wi-day-snow"
+      "moderate snow" -> "wi-snow"
+      "patchy heavy snow" -> "wi-day-snow"
+      "heavy snow" -> "wi-snow"
+      "ice pellets" -> "wi-hail"
+      "light rain shower" -> "wi-day-showers"
+      "moderate or heavy rain shower" -> "wi-day-showers"
+      "torrential rain shower" -> "wi-day-showers"
+      "light sleet showers" -> "wi-day-sleet"
+      "moderate or heavy sleet showers" -> "wi-day-sleet"
+      "light snow showers" -> "wi-day-snow"
+      "moderate or heavy snow showers" -> "wi-snow"
+      "light showers of ice pellets" -> "wi-day-hail"
+      "moderate or heavy showers of ice pellets" -> "wi-day-hail"
+      "patchy light rain with thunder" -> "wi-day-storm-showers"
+      "moderate or heavy rain with thunder" -> "wi-thunderstorm"
+      "patchy light snow with thunder" -> "wi-day-snow-thunderstorm"
+      "moderate or heavy snow with thunder" -> "wi-snow-thunderstorm"
+      _ -> "wi-day-sunny"  # default icon
+    end
+  end
+
   def render(assigns) do
     ~H"""
     <div class="container mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">Weather Forecast</h1>
+      <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">Get A City or Location Weather Forecast</h1>
 
       <form phx-submit="search" class="mb-8">
         <div class="flex items-center justify-center">
@@ -110,9 +107,12 @@ defmodule WeatherAppWeb.WeatherLive do
         <div class="bg-white shadow-lg rounded-lg overflow-hidden">
           <div class="px-6 py-4">
             <h2 class="text-2xl font-bold text-gray-800 mb-2"><%= @weather.location %></h2>
-            <p class="text-gray-600 text-lg">
-              Current: <%= @weather.current.temp_c %>°C, <%= @weather.current.condition %>
-            </p>
+            <div class="flex items-center">
+              <i class={"wi #{weather_icon(@weather.current.condition)} text-5xl mr-4"}></i>
+              <p class="text-gray-600 text-lg">
+                <%= @weather.current.temp_c %>°C, <%= @weather.current.condition %>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -124,11 +124,12 @@ defmodule WeatherAppWeb.WeatherLive do
                 <h4 class="font-semibold text-gray-800"><%= day.date %></h4>
               </div>
               <div class="px-4 py-3">
+                <div class="flex items-center mb-2">
+                  <i class={"wi #{weather_icon(day.condition)} text-3xl mr-2"}></i>
+                  <p class="text-sm text-gray-600"><%= day.condition %></p>
+                </div>
                 <p class="text-sm text-gray-600">
                   <%= day.min_temp_c %>°C to <%= day.max_temp_c %>°C
-                </p>
-                <p class="text-sm text-gray-600 mt-1">
-                  <%= day.condition %>
                 </p>
               </div>
             </div>
