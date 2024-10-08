@@ -3,21 +3,47 @@ defmodule WeatherAppWeb.WeatherLive do
   alias WeatherApp.Weather
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, query: "", weather: nil, loading: false, error: nil)}
+    {:ok, assign(socket, query: "", weather: nil, loading: false, error: nil, temp_unit: :celsius, search_history: [], show_history: false)}
   end
 
   def handle_event("search", %{"query" => query}, socket) do
     send(self(), {:run_search, query})
-    {:noreply, assign(socket, query: query, loading: true)}
+    {:noreply, assign(socket, query: query, loading: true, show_history: false)}
+  end
+
+  def handle_event("toggle_temp_unit", _, socket) do
+    new_unit = if socket.assigns.temp_unit == :celsius, do: :fahrenheit, else: :celsius
+    {:noreply, assign(socket, temp_unit: new_unit)}
+  end
+
+  def handle_event("show_history", _, socket) do
+    {:noreply, assign(socket, show_history: true)}
+  end
+
+  def handle_event("hide_history", _, socket) do
+    {:noreply, assign(socket, show_history: false)}
+  end
+
+  def handle_event("select_history", %{"query" => query}, socket) do
+    send(self(), {:run_search, query})
+    {:noreply, assign(socket, query: query, loading: true, show_history: false)}
   end
 
   def handle_info({:run_search, query}, socket) do
     case Weather.get_forecast(query) do
       {:ok, weather} ->
-        {:noreply, assign(socket, weather: weather, loading: false, error: nil)}
+        updated_history = update_search_history(socket.assigns.search_history, query)
+        {:noreply, assign(socket, weather: weather, loading: false, error: nil, search_history: updated_history)}
       {:error, message} ->
         {:noreply, assign(socket, weather: nil, loading: false, error: message)}
     end
+  end
+
+  defp update_search_history(history, query) do
+    history
+    |> Enum.reject(&(&1 == query))
+    |> Enum.take(4)
+    |> then(&[query | &1])
   end
 
   def weather_icon(condition) do
@@ -75,20 +101,46 @@ defmodule WeatherAppWeb.WeatherLive do
     end
   end
 
+  def celsius_to_fahrenheit(celsius) do
+    (celsius * 9/5) + 32
+  end
+
+  def format_temp(temp, :celsius), do: "#{Float.round(temp, 1)}°C"
+  def format_temp(temp, :fahrenheit), do: "#{Float.round(celsius_to_fahrenheit(temp), 1)}°F"
+
   def render(assigns) do
     ~H"""
     <div class="container mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">Get A City or Location Weather Forecast</h1>
+      <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">Weather Forecast</h1>
 
-      <form phx-submit="search" class="mb-8">
-        <div class="flex items-center justify-center">
-          <input type="text" name="query" value={@query} placeholder="Enter city or lat,lon"
-                 class="px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow" />
+      <div class="mb-8 relative">
+        <form phx-submit="search" class="flex items-center justify-center">
+          <div class="relative flex-grow">
+            <input type="text" name="query" value={@query} placeholder="Enter city or lat,lon"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   phx-focus="show_history" phx-blur="hide_history" autocomplete="off" />
+            <%= if @show_history and length(@search_history) > 0 do %>
+              <div class="absolute z-10 w-full bg-white border border-gray-300 rounded-b-lg shadow-lg">
+                <%= for item <- @search_history do %>
+                  <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                       phx-click="select_history" phx-value-query={item}>
+                    <%= item %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
           <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
             Search
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
+
+      <div class="flex justify-center mb-4">
+        <button phx-click="toggle_temp_unit" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+          Toggle °C/°F
+        </button>
+      </div>
 
       <%= if @loading do %>
         <div class="flex justify-center items-center">
@@ -110,7 +162,7 @@ defmodule WeatherAppWeb.WeatherLive do
             <div class="flex items-center">
               <i class={"wi #{weather_icon(@weather.current.condition)} text-5xl mr-4"}></i>
               <p class="text-gray-600 text-lg">
-                <%= @weather.current.temp_c %>°C, <%= @weather.current.condition %>
+                <%= format_temp(@weather.current.temp_c, @temp_unit) %>, <%= @weather.current.condition %>
               </p>
             </div>
           </div>
@@ -129,7 +181,7 @@ defmodule WeatherAppWeb.WeatherLive do
                   <p class="text-sm text-gray-600"><%= day.condition %></p>
                 </div>
                 <p class="text-sm text-gray-600">
-                  <%= day.min_temp_c %>°C to <%= day.max_temp_c %>°C
+                  <%= format_temp(day.min_temp_c, @temp_unit) %> to <%= format_temp(day.max_temp_c, @temp_unit) %>
                 </p>
               </div>
             </div>
