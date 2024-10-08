@@ -1,6 +1,7 @@
 defmodule WeatherApp.ApiClient do
   use Tesla
 
+  plug Tesla.Middleware.Telemetry
   plug Tesla.Middleware.BaseUrl, "http://api.weatherapi.com/v1"
   plug Tesla.Middleware.JSON
 
