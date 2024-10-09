@@ -10,6 +10,9 @@ config :weather_app, WeatherApp.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# to simulate various API errors
+config :weather_app, api_client: WeatherApp.MockApiClient
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

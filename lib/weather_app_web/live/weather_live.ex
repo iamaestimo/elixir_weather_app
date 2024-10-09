@@ -105,8 +105,15 @@ defmodule WeatherAppWeb.WeatherLive do
     (celsius * 9/5) + 32
   end
 
-  def format_temp(temp, :celsius), do: "#{Float.round(temp, 1)}°C"
-  def format_temp(temp, :fahrenheit), do: "#{Float.round(celsius_to_fahrenheit(temp), 1)}°F"
+  def format_temp(temp, unit) do
+    temp = if is_integer(temp), do: temp / 1, else: temp
+    formatted =
+      case unit do
+        :celsius -> "#{Float.round(temp, 1)}°C"
+        :fahrenheit -> "#{Float.round(celsius_to_fahrenheit(temp), 1)}°F"
+      end
+    formatted
+  end
 
   def render(assigns) do
     ~H"""
